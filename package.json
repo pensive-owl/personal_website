@@ -1,0 +1,22 @@
+{
+  "name": "personal_website",
+  "version": "1.0.0",
+  "description": "jared website",
+  "main": "index.js",
+  "scripts": {
+    "test": "hello"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pensive-owl/personal_website.git"
+  },
+  "author": "Jared Smith",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/pensive-owl/personal_website/issues"
+  },
+  "homepage": "https://github.com/pensive-owl/personal_website#readme",
+  "dependencies": {
+    "axios": "^1.6.8"
+  }
+}
