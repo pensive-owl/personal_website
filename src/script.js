@@ -53,7 +53,7 @@ function createSlots() {
     // Loop through each row and set to empty
     for (let row = 0; row < 4; row++) {
         for (let col = 0; col < 4; col++) {
-            slot = document.createElement('div');
+            const slot = document.createElement('div');
             slot.classList.add('slot');
             slot.dataset.row = row;
             slot.dataset.col = col;
@@ -68,7 +68,7 @@ function createPieces() {
         for (let col = 0; col < 4; col++) {
             const value = puzzleStateArray[row][col];
             if (value !== null) {
-                piece = document.createElement('button');
+                let piece = document.createElement('button');
                 piece.classList.add('piece');
                 piece.textContent = value;
                 piece.dataset.row = row;
@@ -78,7 +78,7 @@ function createPieces() {
                 piece.addEventListener('click', handlePieceClick);
 
                 // Append to slot based on row col data from the puzzleStateArray
-                slot = document.querySelector(
+                const slot = document.querySelector(
                     `.slot[data-row='${row}'][data-col='${col}']`
                 );
                 slot.appendChild(piece);
