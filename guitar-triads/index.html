@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Guitar Triads Tool</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div class="desktop">
+  <div class="xp-window">
+    <div class="titlebar">
+      <div class="titlebar-left">
+        <span class="titlebar-icon">&#9834;</span>
+        <span class="titlebar-text">GuitarTriads98.exe - Scale &amp; Triad Explorer</span>
+      </div>
+      <div class="titlebar-btns">
+        <button class="tb-btn" title="Minimize">_</button>
+        <button class="tb-btn" title="Maximize">&#9633;</button>
+        <button class="tb-btn tb-close" title="Close">&#10005;</button>
+      </div>
+    </div>
+
+    <div class="menubar">
+      <span class="menu-item">File</span>
+      <span class="menu-item">Edit</span>
+      <span class="menu-item">View</span>
+      <span class="menu-item">Scales</span>
+      <span class="menu-item">Triads</span>
+      <span class="menu-item">Help</span>
+    </div>
+
+    <div class="window-body">
+
+      <div class="controls-row">
+        <fieldset class="groupbox">
+          <legend>Key</legend>
+          <select id="keySelect"></select>
+        </fieldset>
+
+        <fieldset class="groupbox">
+          <legend>Scale</legend>
+          <select id="scaleSelect">
+            <option value="major">Major (Ionian)</option>
+            <option value="minor">Natural Minor (Aeolian)</option>
+            <option value="majorPent">Major Pentatonic</option>
+            <option value="minorPent">Minor Pentatonic</option>
+          </select>
+        </fieldset>
+
+        <fieldset class="groupbox">
+          <legend>Note Display</legend>
+          <div class="radio-row">
+            <label><input type="radio" name="displayMode" value="dots" checked> Dots</label>
+            <label><input type="radio" name="displayMode" value="notes"> Note Names</label>
+            <label><input type="radio" name="displayMode" value="degrees"> Relative (1-7)</label>
+          </div>
+        </fieldset>
+
+        <fieldset class="groupbox">
+          <legend>Options</legend>
+          <div class="radio-row">
+            <label><input type="checkbox" id="showScaleToggle" checked> Show scale notes</label>
+            <label><input type="checkbox" id="leftyToggle"> Lefty flip</label>
+            <label><input type="checkbox" id="flipVToggle"> Flip vertical</label>
+          </div>
+        </fieldset>
+      </div>
+
+      <div class="fretboard-panel sunken">
+        <div id="fretboardScroll">
+          <svg id="fretboardSvg" xmlns="http://www.w3.org/2000/svg"></svg>
+        </div>
+      </div>
+
+      <fieldset class="groupbox triad-groupbox">
+        <legend>Triads for Soloing</legend>
+        <div class="triad-controls">
+          <label class="triad-enable"><input type="checkbox" id="showTriadToggle"> Highlight triad:</label>
+          <select id="triadDegreeSelect"></select>
+
+          <span class="string-set-label">on string sets:</span>
+          <label><input type="checkbox" class="stringSetChk" value="0,1,2"> E-A-D (low)</label>
+          <label><input type="checkbox" class="stringSetChk" value="1,2,3"> A-D-G</label>
+          <label><input type="checkbox" class="stringSetChk" value="2,3,4" checked> D-G-B</label>
+          <label><input type="checkbox" class="stringSetChk" value="3,4,5" checked> G-B-E (high)</label>
+        </div>
+        <div class="triad-legend">
+          <span class="legend-chip role-R">R</span> Root
+          <span class="legend-chip role-3">3</span> Third
+          <span class="legend-chip role-5">5</span> Fifth
+          <span class="legend-sep">|</span>
+          <span id="triadReadout">Pick a degree and check "Highlight triad" to see shapes.</span>
+        </div>
+      </fieldset>
+
+    </div>
+
+    <div class="statusbar">
+      <div class="status-cell" id="statusKey">Key: C</div>
+      <div class="status-cell" id="statusScale">Scale: Major</div>
+      <div class="status-cell" id="statusTriad">Triad: off</div>
+    </div>
+  </div>
+</div>
+
+<div class="taskbar">
+  <div class="start-btn"><span class="start-flag">&#10052;</span> Start</div>
+  <div class="taskbar-app">&#9834; GuitarTriads98.exe</div>
+  <div class="taskbar-clock" id="taskbarClock">12:00 PM</div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

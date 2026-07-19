@@ -1,0 +1,287 @@
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: Tahoma, "MS Sans Serif", Geneva, Verdana, sans-serif;
+  font-size: 11px;
+  background: #3a6ea5 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='4' height='4' fill='%23327ac1'/%3E%3Crect width='2' height='2' fill='%233a86cc'/%3E%3Crect x='2' y='2' width='2' height='2' fill='%233a86cc'/%3E%3C/svg%3E");
+  image-rendering: pixelated;
+}
+
+.desktop {
+  min-height: calc(100vh - 34px);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 24px 12px 12px 12px;
+}
+
+/* ---------- window chrome ---------- */
+.xp-window {
+  width: 100%;
+  max-width: 960px;
+  background: #ece9d8;
+  border: 1px solid #0831d9;
+  border-radius: 8px 8px 3px 3px;
+  box-shadow: 3px 3px 10px rgba(0,0,0,0.5);
+  overflow: hidden;
+}
+
+.titlebar {
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 3px 2px 6px;
+  background: linear-gradient(180deg, #2f71e5 0%, #1958e0 4%, #0f45d4 8%, #1450d8 40%, #1c5bde 60%, #2361e0 88%, #1247c9 100%);
+  border-bottom: 1px solid #0831d9;
+}
+
+.titlebar-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #fff;
+  font-weight: bold;
+  font-size: 12px;
+  text-shadow: 1px 1px 1px rgba(0,0,0,0.4);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.titlebar-icon {
+  background: #ffd23f;
+  color: #7a4b00;
+  border-radius: 2px;
+  padding: 0 3px;
+  font-size: 11px;
+}
+
+.titlebar-btns { display: flex; gap: 2px; }
+
+.tb-btn {
+  width: 21px;
+  height: 20px;
+  background: linear-gradient(180deg, #6fa8f5, #2a5fd8);
+  border: 1px solid #1240b0;
+  border-radius: 3px;
+  color: #fff;
+  font-weight: bold;
+  font-size: 11px;
+  line-height: 1;
+  cursor: default;
+}
+.tb-btn.tb-close { background: linear-gradient(180deg, #f5a08a, #d8412a); }
+
+.menubar {
+  background: #ece9d8;
+  border-bottom: 1px solid #b8b391;
+  padding: 3px 6px;
+  display: flex;
+  gap: 14px;
+}
+.menu-item { color: #000; cursor: default; }
+.menu-item:hover { background: #316ac5; color: #fff; padding: 0 2px; }
+
+.window-body {
+  padding: 10px;
+  background: #ece9d8;
+}
+
+/* ---------- groupboxes ---------- */
+.controls-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.groupbox {
+  border: 1px solid #8f8f8f;
+  border-radius: 4px;
+  background: #ece9d8;
+  padding: 6px 8px 8px 8px;
+}
+.groupbox legend {
+  padding: 0 4px;
+  font-weight: bold;
+  color: #003c74;
+  font-size: 11px;
+}
+
+.radio-row { display: flex; flex-direction: column; gap: 3px; }
+.radio-row label { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+
+select {
+  font-family: Tahoma, sans-serif;
+  font-size: 11px;
+  padding: 2px 3px;
+  border: 1px solid #7f9db9;
+  background: #fff;
+  min-width: 130px;
+}
+
+/* ---------- sunken fretboard panel ---------- */
+.sunken {
+  border-top: 1px solid #808080;
+  border-left: 1px solid #808080;
+  border-right: 1px solid #fff;
+  border-bottom: 1px solid #fff;
+  box-shadow: inset 1px 1px 0 #404040, inset -1px -1px 0 #dfdfdf;
+  background: #fdfdf5;
+}
+
+.fretboard-panel {
+  padding: 10px;
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+
+#fretboardScroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+#fretboardSvg {
+  display: block;
+  shape-rendering: crispEdges;
+}
+
+/* ---------- triad panel ---------- */
+.triad-groupbox { display: block; }
+
+.triad-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.triad-enable { display: flex; align-items: center; gap: 4px; font-weight: bold; }
+.string-set-label { color: #444; }
+.triad-controls label { display: flex; align-items: center; gap: 3px; white-space: nowrap; }
+
+.triad-legend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  border-top: 1px dotted #b8b391;
+  padding-top: 6px;
+}
+.legend-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  font-weight: bold;
+  font-size: 10px;
+  color: #fff;
+  border: 1px solid rgba(0,0,0,0.4);
+}
+.role-R { background: #cc3333; }
+.role-3 { background: #2e8b57; }
+.role-5 { background: #3366cc; }
+.legend-sep { color: #999; }
+#triadReadout { font-style: italic; color: #333; }
+
+/* ---------- statusbar ---------- */
+.statusbar {
+  display: flex;
+  border-top: 1px solid #fff;
+  background: #ece9d8;
+}
+.status-cell {
+  flex: 1;
+  padding: 3px 8px;
+  border-top: 1px solid #808080;
+  border-right: 1px solid #808080;
+  margin: 2px 0 2px 2px;
+  box-shadow: inset -1px -1px 0 #fff;
+}
+.status-cell:last-child { margin-right: 2px; }
+
+/* ---------- taskbar ---------- */
+.taskbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 34px;
+  background: linear-gradient(180deg, #2f71e5 0%, #1958e0 10%, #174cc7 50%, #143fae 100%);
+  border-top: 1px solid #4a90ff;
+  display: flex;
+  align-items: center;
+  padding: 0 4px;
+  gap: 8px;
+  z-index: 100;
+}
+.start-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: linear-gradient(180deg, #3fae3f, #1f7a1f);
+  color: #fff;
+  font-weight: bold;
+  font-style: italic;
+  padding: 3px 10px;
+  border-radius: 4px;
+  border: 1px solid #145214;
+  height: 26px;
+}
+.start-flag { color: #ffd23f; font-style: normal; }
+.taskbar-app {
+  background: #1f4fc7;
+  border: 1px solid #0d2f8a;
+  border-radius: 3px;
+  color: #fff;
+  padding: 3px 10px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  box-shadow: inset 1px 1px 0 rgba(255,255,255,0.2);
+}
+.taskbar-clock {
+  margin-left: auto;
+  background: #1f4fc7;
+  color: #fff;
+  padding: 3px 10px;
+  border-left: 1px solid #0d2f8a;
+  height: 26px;
+  display: flex;
+  align-items: center;
+}
+
+/* ---------- svg note styling ---------- */
+.fret-line { stroke: #999; stroke-width: 1; }
+.nut-line { stroke: #222; stroke-width: 6; }
+.string-line { stroke: #7a6a4a; }
+.fret-marker { fill: #d8d2b8; }
+.string-label { fill: #333; font-size: 11px; font-family: Tahoma, sans-serif; }
+.fret-number { fill: #666; font-size: 10px; font-family: Tahoma, sans-serif; }
+
+.note-dot { cursor: default; }
+.note-dot.scale { fill: #a9c6f5; stroke: #3a6ea5; stroke-width: 1; }
+.note-dot.scale.root { fill: #ffd23f; stroke: #a3720b; }
+.note-label { font-family: Tahoma, sans-serif; font-weight: bold; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+.note-label.scale-label { fill: #1b3a63; font-size: 10px; }
+.note-label.scale-label.root-label { fill: #5a3d00; }
+.note-label.triad-label { fill: #fff; font-size: 10px; }
+
+.triad-shape-box {
+  fill: rgba(80, 60, 20, 0.06);
+  stroke: #8a7a4a;
+  stroke-width: 1;
+  stroke-dasharray: 3 2;
+}
+.triad-inv-tag {
+  font-family: Tahoma, sans-serif;
+  font-size: 9px;
+  font-weight: bold;
+  fill: #5a4a1a;
+}
