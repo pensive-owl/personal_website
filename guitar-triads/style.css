@@ -143,6 +143,7 @@ select {
 #fretboardScroll {
   overflow-x: auto;
   overflow-y: hidden;
+  padding-bottom: 10px; /* keep fret numbers clear of the horizontal scrollbar */
 }
 
 #fretboardSvg {
@@ -263,7 +264,7 @@ select {
 .string-line { stroke: #7a6a4a; }
 .fret-marker { fill: #d8d2b8; }
 .string-label { fill: #333; font-size: 11px; font-family: Tahoma, sans-serif; }
-.fret-number { fill: #666; font-size: 10px; font-family: Tahoma, sans-serif; }
+.fret-number { fill: #444; font-size: 13px; font-weight: bold; font-family: Tahoma, sans-serif; }
 
 .note-dot { cursor: default; }
 .note-dot.scale { fill: #a9c6f5; stroke: #3a6ea5; stroke-width: 1; }

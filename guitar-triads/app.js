@@ -152,7 +152,7 @@
   // ============================================================
 
   var SVG_NS = "http://www.w3.org/2000/svg";
-  var LEFT_MARGIN = 46, TOP_MARGIN = 26, RIGHT_MARGIN = 24, BOTTOM_MARGIN = 26;
+  var LEFT_MARGIN = 46, TOP_MARGIN = 26, RIGHT_MARGIN = 24, BOTTOM_MARGIN = 40;
   var NUT_WIDTH = 10, FRET_WIDTH = 56, STRING_SPACING = 34;
   var DOT_R = 11;
 
@@ -221,7 +221,7 @@
     for (var fn = 1; fn <= NUM_FRETS; fn++) {
       if (fn === 3 || fn === 5 || fn === 7 || fn === 9 || fn === 12 || fn === 15) {
         var fnx = fretCenterX(fn);
-        var t = svgEl("text", { x: fnx, y: boardBottom + 16, class: "fret-number", "text-anchor": "middle" });
+        var t = svgEl("text", { x: fnx, y: boardBottom + 20, class: "fret-number", "text-anchor": "middle" });
         t.textContent = fn;
         svg.appendChild(t);
       }
