@@ -135,7 +135,7 @@ select {
 }
 
 .fretboard-panel {
-  padding: 10px;
+  padding: 10px 10px 0 10px; /* no bottom padding: scrollbar sits flush with the sunken edge */
   margin-bottom: 10px;
   overflow: hidden;
 }
