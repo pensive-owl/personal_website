@@ -360,9 +360,73 @@
   // WINDOW MANAGER
   // ============================================================
 
-  var desktop, taskbarApps, startMenu;
+  var desktop, taskbarApps, startMenu, snapPreview;
   var zTop = 10;
   var winSeq = 0;
+
+  // ---- edge/corner snap (modern Windows style) ----
+  var SNAP_EDGE = 14;    // px from a desktop edge that counts as "at the edge"
+  var SNAP_CORNER = 130; // px along the edge that counts as a corner
+  var MIN_W = 430, MIN_H = 260;
+
+  function snapZoneFor(x, y) {
+    var W = desktop.clientWidth, H = desktop.clientHeight;
+    var atL = x < SNAP_EDGE, atR = x > W - SNAP_EDGE;
+    var atT = y < SNAP_EDGE, atB = y > H - SNAP_EDGE;
+    var nearL = x < SNAP_CORNER, nearR = x > W - SNAP_CORNER;
+    var nearT = y < SNAP_CORNER, nearB = y > H - SNAP_CORNER;
+    if ((atT && nearL) || (atL && nearT)) return "tl";
+    if ((atT && nearR) || (atR && nearT)) return "tr";
+    if ((atB && nearL) || (atL && nearB)) return "bl";
+    if ((atB && nearR) || (atR && nearB)) return "br";
+    if (atT) return "top";
+    if (atB) return "bottom";
+    if (atL) return "left";
+    if (atR) return "right";
+    return null;
+  }
+
+  function snapRect(zone) {
+    var W = desktop.clientWidth, H = desktop.clientHeight;
+    var hw = Math.floor(W / 2), hh = Math.floor(H / 2);
+    switch (zone) {
+      case "top":    return { left: 0,  top: 0,  width: W,      height: hh };
+      case "bottom": return { left: 0,  top: hh, width: W,      height: H - hh };
+      case "left":   return { left: 0,  top: 0,  width: hw,     height: H };
+      case "right":  return { left: hw, top: 0,  width: W - hw, height: H };
+      case "tl":     return { left: 0,  top: 0,  width: hw,     height: hh };
+      case "tr":     return { left: hw, top: 0,  width: W - hw, height: hh };
+      case "bl":     return { left: 0,  top: hh, width: hw,     height: H - hh };
+      case "br":     return { left: hw, top: hh, width: W - hw, height: H - hh };
+    }
+  }
+
+  function showSnapPreview(r) {
+    snapPreview.style.display = "block";
+    snapPreview.style.left = r.left + "px";
+    snapPreview.style.top = r.top + "px";
+    snapPreview.style.width = r.width + "px";
+    snapPreview.style.height = r.height + "px";
+  }
+
+  function hideSnapPreview() {
+    snapPreview.style.display = "none";
+  }
+
+  function applySnap(win, zone) {
+    var root = win.root;
+    if (!win.snapped) {
+      win.preSnap = { width: root.offsetWidth, height: root.style.height ? root.offsetHeight : null };
+    }
+    root.classList.remove("maximized");
+    var r = snapRect(zone);
+    root.style.left = r.left + "px";
+    root.style.top = r.top + "px";
+    root.style.width = r.width + "px";
+    root.style.height = r.height + "px";
+    root.style.maxWidth = "none";
+    win.snapped = zone;
+  }
 
   function focusWindow(win) {
     win.root.style.zIndex = ++zTop;
@@ -559,6 +623,7 @@
     q(".tb-close").addEventListener("click", closeWin);
     q(".tb-min").addEventListener("click", minimizeWin);
     q(".tb-max").addEventListener("click", function () {
+      win.snapped = null;
       root.classList.toggle("maximized");
       focusWindow(win);
     });
@@ -566,24 +631,85 @@
     // click anywhere on the window brings it to front
     root.addEventListener("pointerdown", function () { focusWindow(win); }, true);
 
-    // drag by titlebar
+    // drag by titlebar, with edge/corner snap
     var titlebar = q(".titlebar");
     titlebar.addEventListener("pointerdown", function (e) {
       if (e.target.closest(".tb-btn")) return;
-      if (root.classList.contains("maximized")) return;
+      var dRect = desktop.getBoundingClientRect();
+
+      // dragging a maximized/snapped window tears it off at its natural size,
+      // keeping the grab point under the cursor (modern Windows behavior)
+      if (root.classList.contains("maximized") || win.snapped) {
+        var grabFrac = (e.clientX - root.getBoundingClientRect().left) / root.getBoundingClientRect().width;
+        var restoreW = (win.preSnap && win.preSnap.width) || Math.min(960, desktop.clientWidth - 16);
+        root.classList.remove("maximized");
+        win.snapped = null;
+        root.style.width = restoreW + "px";
+        root.style.height = (win.preSnap && win.preSnap.height) ? win.preSnap.height + "px" : "";
+        root.style.left = (e.clientX - dRect.left + desktop.scrollLeft - restoreW * grabFrac) + "px";
+        root.style.top = Math.max(0, e.clientY - dRect.top + desktop.scrollTop - 15) + "px";
+      }
+
       var startX = e.clientX, startY = e.clientY;
       var startL = root.offsetLeft, startT = root.offsetTop;
+      var zone = null;
       function onMove(ev) {
         root.style.left = (startL + ev.clientX - startX) + "px";
         root.style.top = Math.max(0, startT + ev.clientY - startY) + "px";
+        var px = ev.clientX - dRect.left + desktop.scrollLeft;
+        var py = ev.clientY - dRect.top + desktop.scrollTop;
+        zone = snapZoneFor(px, py);
+        if (zone) showSnapPreview(snapRect(zone));
+        else hideSnapPreview();
       }
       function onUp() {
         document.removeEventListener("pointermove", onMove);
         document.removeEventListener("pointerup", onUp);
+        hideSnapPreview();
+        if (zone) applySnap(win, zone);
       }
       document.addEventListener("pointermove", onMove);
       document.addEventListener("pointerup", onUp);
       e.preventDefault();
+    });
+
+    // resize handles (edges + corners)
+    ["n", "s", "e", "w", "ne", "nw", "se", "sw"].forEach(function (dir) {
+      var h = document.createElement("div");
+      h.className = "resize-handle rh-" + dir;
+      root.appendChild(h);
+      h.addEventListener("pointerdown", function (e) {
+        if (root.classList.contains("maximized")) return;
+        focusWindow(win);
+        win.snapped = null;
+        var startX = e.clientX, startY = e.clientY;
+        var startW = root.offsetWidth, startH = root.offsetHeight;
+        var startL = root.offsetLeft, startT = root.offsetTop;
+        function onMove(ev) {
+          var dx = ev.clientX - startX, dy = ev.clientY - startY;
+          var L = startL, T = startT, W = startW, H = startH;
+          if (dir.indexOf("e") > -1) W = startW + dx;
+          if (dir.indexOf("s") > -1) H = startH + dy;
+          if (dir.indexOf("w") > -1) { W = startW - dx; L = startL + dx; }
+          if (dir.indexOf("n") > -1) { H = startH - dy; T = startT + dy; }
+          if (W < MIN_W) { if (dir.indexOf("w") > -1) L -= MIN_W - W; W = MIN_W; }
+          if (H < MIN_H) { if (dir.indexOf("n") > -1) T -= MIN_H - H; H = MIN_H; }
+          if (T < 0) { H += T; T = 0; }
+          root.style.left = L + "px";
+          root.style.top = T + "px";
+          root.style.width = W + "px";
+          root.style.height = H + "px";
+          root.style.maxWidth = "none";
+        }
+        function onUp() {
+          document.removeEventListener("pointermove", onMove);
+          document.removeEventListener("pointerup", onUp);
+        }
+        document.addEventListener("pointermove", onMove);
+        document.addEventListener("pointerup", onUp);
+        e.preventDefault();
+        e.stopPropagation();
+      });
     });
 
     // File menu
@@ -632,6 +758,10 @@
     desktop = document.getElementById("desktop");
     taskbarApps = document.getElementById("taskbarApps");
     startMenu = document.getElementById("startMenu");
+
+    snapPreview = document.createElement("div");
+    snapPreview.className = "snap-preview";
+    desktop.appendChild(snapPreview);
 
     document.getElementById("startBtn").addEventListener("click", function (e) {
       startMenu.classList.toggle("hidden");

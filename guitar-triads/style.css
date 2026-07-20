@@ -21,6 +21,8 @@ html, body {
   position: absolute;
   width: 960px;
   max-width: calc(100vw - 16px);
+  display: flex;
+  flex-direction: column;
   background: #ece9d8;
   border: 1px solid #0831d9;
   border-radius: 8px 8px 3px 3px;
@@ -32,8 +34,31 @@ html, body {
   top: 0 !important;
   left: 0 !important;
   width: 100% !important;
+  height: 100% !important;
   max-width: 100%;
   border-radius: 0;
+}
+
+/* ---------- resize handles ---------- */
+.resize-handle { position: absolute; z-index: 30; touch-action: none; }
+.rh-n  { top: 0; left: 12px; right: 12px; height: 5px; cursor: n-resize; }
+.rh-s  { bottom: 0; left: 12px; right: 12px; height: 5px; cursor: s-resize; }
+.rh-e  { right: 0; top: 12px; bottom: 12px; width: 5px; cursor: e-resize; }
+.rh-w  { left: 0; top: 12px; bottom: 12px; width: 5px; cursor: w-resize; }
+.rh-nw { top: 0; left: 0; width: 12px; height: 12px; cursor: nw-resize; }
+.rh-ne { top: 0; right: 0; width: 12px; height: 12px; cursor: ne-resize; }
+.rh-sw { bottom: 0; left: 0; width: 12px; height: 12px; cursor: sw-resize; }
+.rh-se { bottom: 0; right: 0; width: 12px; height: 12px; cursor: se-resize; }
+
+/* ---------- snap preview overlay ---------- */
+.snap-preview {
+  position: absolute;
+  display: none;
+  background: rgba(120, 170, 255, 0.25);
+  border: 2px solid rgba(80, 140, 240, 0.9);
+  border-radius: 6px;
+  pointer-events: none;
+  z-index: 9000;
 }
 
 .titlebar {
@@ -125,7 +150,11 @@ html, body {
 .window-body {
   padding: 10px;
   background: #ece9d8;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
 }
+.titlebar, .menubar, .statusbar { flex-shrink: 0; }
 
 /* ---------- groupboxes ---------- */
 .controls-row {
