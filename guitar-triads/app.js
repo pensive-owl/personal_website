@@ -49,8 +49,8 @@
   // Full 7-note parent scales, used to derive diatonic triads regardless of which
   // (possibly pentatonic) subset is currently drawn on the fretboard.
   var PARENT_SCALES = {
-    major: { offsets: [0, 2, 4, 5, 7, 9, 11], romans: ["I", "ii", "iii", "IV", "V", "vi", "vii°"], qualities: ["maj", "min", "min", "maj", "maj", "min", "dim"] },
-    minor: { offsets: [0, 2, 3, 5, 7, 8, 10], romans: ["i", "ii°", "III", "iv", "v", "VI", "VII"], qualities: ["min", "dim", "maj", "min", "min", "maj", "maj"] }
+    major: { offsets: [0, 2, 4, 5, 7, 9, 11], romans: ["I", "ii", "iii", "IV", "V", "vi", "vii°"], qualities: ["maj", "min", "min", "maj", "maj", "min", "dim"], degreeLabels: ["1", "2", "3", "4", "5", "6", "7"] },
+    minor: { offsets: [0, 2, 3, 5, 7, 8, 10], romans: ["i", "ii°", "III", "iv", "v", "VI", "VII"], qualities: ["min", "dim", "maj", "min", "min", "maj", "maj"], degreeLabels: ["1", "2", "b3", "4", "5", "b6", "b7"] }
   };
 
   function spellScale(rootLetter, rootPc, offsets, degreeSteps) {
@@ -351,7 +351,7 @@
     var idxs = [i % 7, (i + 2) % 7, (i + 4) % 7];
     idxs.forEach(function (idx, roleIdx) {
       var n = spelled[idx];
-      map[triadPCs[roleIdx]] = { letter: n.letter, acc: n.acc, degree: "" };
+      map[triadPCs[roleIdx]] = { letter: n.letter, acc: n.acc, degree: parent.degreeLabels[idx] };
     });
     return map;
   }
