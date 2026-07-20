@@ -363,6 +363,43 @@
   var desktop, taskbarApps, startMenu, snapPreview;
   var zTop = 10;
   var winSeq = 0;
+  var windows = [];
+
+  // ---- session persistence ----
+  var STORAGE_KEY = "guitarTriads98State";
+
+  function saveState() {
+    try {
+      var data = {
+        v: 1,
+        windows: windows.map(function (w) {
+          return {
+            state: w.state,
+            geom: {
+              left: w.root.style.left,
+              top: w.root.style.top,
+              width: w.root.style.width,
+              height: w.root.style.height
+            },
+            minimized: w.minimized,
+            maximized: w.root.classList.contains("maximized"),
+            snapped: w.snapped || null,
+            preSnap: w.preSnap || null,
+            z: parseInt(w.root.style.zIndex, 10) || 0
+          };
+        })
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch (e) { /* storage unavailable: run without persistence */ }
+  }
+
+  function loadState() {
+    try {
+      var data = JSON.parse(localStorage.getItem(STORAGE_KEY));
+      if (data && data.v === 1 && data.windows && data.windows.length) return data;
+    } catch (e) { /* corrupt or unavailable: fall through */ }
+    return null;
+  }
 
   // ---- edge/corner snap (modern Windows style) ----
   var SNAP_EDGE = 14;    // px from a desktop edge that counts as "at the edge"
@@ -434,9 +471,10 @@
     win.root.classList.add("focused");
     document.querySelectorAll(".taskbar-app").forEach(function (el) { el.classList.remove("active"); });
     win.taskBtn.classList.add("active");
+    saveState();
   }
 
-  function createAppWindow() {
+  function createAppWindow(saved) {
     winSeq++;
     var seq = winSeq;
     var tmpl = document.getElementById("xpWindowTemplate");
@@ -455,8 +493,21 @@
       lefty: false,
       flipV: false
     };
+    if (saved && saved.state) {
+      Object.keys(state).forEach(function (k) {
+        if (saved.state[k] !== undefined) state[k] = saved.state[k];
+      });
+    }
 
-    var win = { root: root, state: state, taskBtn: null, minimized: false };
+    var win = {
+      root: root,
+      state: state,
+      taskBtn: null,
+      minimized: !!(saved && saved.minimized),
+      snapped: (saved && saved.snapped) || null,
+      preSnap: (saved && saved.preSnap) || null
+    };
+    windows.push(win);
 
     function q(sel) { return root.querySelector(sel); }
 
@@ -490,6 +541,25 @@
     // radio groups must be unique per window
     root.querySelectorAll(".displayModeRadio").forEach(function (r) {
       r.name = "displayMode-" + seq;
+    });
+
+    // sync controls to (possibly restored) state
+    for (var ki = 0; ki < KEY_LIST.length; ki++) {
+      if (KEY_LIST[ki].letter === state.keyLetter && KEY_LIST[ki].acc === state.keyAcc) {
+        keySel.value = String(ki);
+        break;
+      }
+    }
+    q(".scaleSelect").value = state.scaleType;
+    root.querySelectorAll(".displayModeRadio").forEach(function (r) {
+      r.checked = r.value === state.displayMode;
+    });
+    q(".showScaleToggle").checked = state.showScale;
+    q(".showTriadToggle").checked = state.showTriad;
+    q(".leftyToggle").checked = state.lefty;
+    q(".flipVToggle").checked = state.flipV;
+    root.querySelectorAll(".stringSetChk").forEach(function (chk) {
+      chk.checked = state.stringSets.some(function (s) { return s.join(",") === chk.value; });
     });
 
     function populateTriadDegreeSelect() {
@@ -547,6 +617,7 @@
       q(".statusScale").textContent = "Scale: " + SCALE_TYPES[state.scaleType].name;
       q(".titlebar-text").textContent = "GuitarTriads98.exe - " + summary;
       taskBtn.textContent = "♪ " + summary;
+      saveState();
     }
 
     // ---- control wiring ----
@@ -612,12 +683,16 @@
     function closeWin() {
       root.remove();
       taskBtn.remove();
+      var idx = windows.indexOf(win);
+      if (idx > -1) windows.splice(idx, 1);
+      saveState();
     }
 
     function minimizeWin() {
       win.minimized = true;
       root.classList.add("minimized");
       taskBtn.classList.remove("active");
+      saveState();
     }
 
     q(".tb-close").addEventListener("click", closeWin);
@@ -667,6 +742,7 @@
         document.removeEventListener("pointerup", onUp);
         hideSnapPreview();
         if (zone) applySnap(win, zone);
+        saveState();
       }
       document.addEventListener("pointermove", onMove);
       document.addEventListener("pointerup", onUp);
@@ -704,6 +780,7 @@
         function onUp() {
           document.removeEventListener("pointermove", onMove);
           document.removeEventListener("pointerup", onUp);
+          saveState();
         }
         document.addEventListener("pointermove", onMove);
         document.addEventListener("pointerup", onUp);
@@ -726,17 +803,30 @@
     });
     q(".opt-close").addEventListener("click", closeWin);
 
-    // ---- place on desktop (cascade) ----
-    var wWidth = Math.min(960, desktop.clientWidth - 16);
-    var baseLeft = Math.max(8, (desktop.clientWidth - wWidth) / 2);
-    var offset = ((seq - 1) % 7) * 26;
-    root.style.left = Math.min(baseLeft + offset, Math.max(8, desktop.clientWidth - wWidth - 8)) + "px";
-    root.style.top = (10 + offset) + "px";
+    // ---- place on desktop (restored geometry, or cascade for new windows) ----
+    if (saved && saved.geom && saved.geom.left) {
+      root.style.left = saved.geom.left;
+      root.style.top = saved.geom.top;
+      if (saved.geom.width) { root.style.width = saved.geom.width; root.style.maxWidth = "none"; }
+      if (saved.geom.height) root.style.height = saved.geom.height;
+      if (saved.maximized) root.classList.add("maximized");
+    } else {
+      var wWidth = Math.min(960, desktop.clientWidth - 16);
+      var baseLeft = Math.max(8, (desktop.clientWidth - wWidth) / 2);
+      var offset = ((seq - 1) % 7) * 26;
+      root.style.left = Math.min(baseLeft + offset, Math.max(8, desktop.clientWidth - wWidth - 8)) + "px";
+      root.style.top = (10 + offset) + "px";
+    }
 
     desktop.appendChild(root);
     populateTriadDegreeSelect();
     render();
-    focusWindow(win);
+    if (win.minimized) {
+      root.classList.add("minimized");
+      root.style.zIndex = ++zTop;
+    } else {
+      focusWindow(win);
+    }
     return win;
   }
 
@@ -778,7 +868,15 @@
       startMenu.classList.add("hidden");
     });
 
-    createAppWindow();
+    // restore last session, or open a fresh window
+    var savedSession = loadState();
+    if (savedSession) {
+      savedSession.windows
+        .sort(function (a, b) { return (a.z || 0) - (b.z || 0); })
+        .forEach(function (wd) { createAppWindow(wd); });
+    } else {
+      createAppWindow();
+    }
 
     updateClock();
     setInterval(updateClock, 1000 * 15);
