@@ -73,17 +73,10 @@
   // FRETBOARD MODEL
   // ============================================================
 
-  var STRINGS_OPEN_MIDI = [40, 45, 50, 55, 59, 64]; // low E, A, D, G, B, high E (row 0 = top = low E)
+  var STRINGS_OPEN_MIDI = [40, 45, 50, 55, 59, 64]; // low E, A, D, G, B, high E
   var STRING_NAMES = ["E", "A", "D", "G", "B", "E"];
   var NUM_FRETS = 15;
   var FRET_MARKERS = { 3: 1, 5: 1, 7: 1, 9: 1, 12: 2, 15: 1 };
-
-  var STRING_SET_NAMES = {
-    "0,1,2": "E-A-D",
-    "1,2,3": "A-D-G",
-    "2,3,4": "D-G-B",
-    "3,4,5": "G-B-E"
-  };
 
   function generateTriadShapes(triadPCs, stringSetIndices, maxFret) {
     var rootPC = triadPCs[0], thirdPC = triadPCs[1], fifthPC = triadPCs[2];
@@ -165,53 +158,59 @@
   function boardWidth() {
     return LEFT_MARGIN + NUT_WIDTH + NUM_FRETS * FRET_WIDTH + RIGHT_MARGIN;
   }
-  // Mirror x for lefty mode (nut on the right). Applied in coordinate space so
+
+  // Per-window coordinate mapping. Mirrors are applied in coordinate space so
   // text labels stay readable instead of being CSS-mirrored.
-  function fx(x) {
-    return state.lefty ? boardWidth() - x : x;
-  }
-  function fretCenterX(fret) {
-    if (fret === 0) return fx(LEFT_MARGIN - 18);
-    return fx(LEFT_MARGIN + NUT_WIDTH + (fret - 0.5) * FRET_WIDTH);
-  }
-  function fretLineX(fret) {
-    return fx(LEFT_MARGIN + NUT_WIDTH + fret * FRET_WIDTH);
-  }
-  // Default orientation: high E (idx 5) on top, low E (idx 0) on bottom.
-  // flipV inverts to bass-on-top.
-  function stringY(stringIdx) {
-    var row = state.flipV ? stringIdx : 5 - stringIdx;
-    return TOP_MARGIN + row * STRING_SPACING;
+  function makeGeometry(state) {
+    function fx(x) {
+      return state.lefty ? boardWidth() - x : x;
+    }
+    return {
+      fx: fx,
+      fretCenterX: function (fret) {
+        if (fret === 0) return fx(LEFT_MARGIN - 18);
+        return fx(LEFT_MARGIN + NUT_WIDTH + (fret - 0.5) * FRET_WIDTH);
+      },
+      fretLineX: function (fret) {
+        return fx(LEFT_MARGIN + NUT_WIDTH + fret * FRET_WIDTH);
+      },
+      // Default orientation: high E (idx 5) on top, low E (idx 0) on bottom.
+      // flipV inverts to bass-on-top.
+      stringY: function (stringIdx) {
+        var row = state.flipV ? stringIdx : 5 - stringIdx;
+        return TOP_MARGIN + row * STRING_SPACING;
+      }
+    };
   }
 
-  function buildFretboardSvg(svg, state) {
+  function buildFretboardSvg(svg, geo) {
     while (svg.firstChild) svg.removeChild(svg.firstChild);
 
-    var width = LEFT_MARGIN + NUT_WIDTH + NUM_FRETS * FRET_WIDTH + RIGHT_MARGIN;
+    var width = boardWidth();
     var height = TOP_MARGIN + 5 * STRING_SPACING + BOTTOM_MARGIN;
     svg.setAttribute("viewBox", "0 0 " + width + " " + height);
     svg.setAttribute("width", width);
     svg.setAttribute("height", height);
 
-    var boardTop = Math.min(stringY(0), stringY(5)) - 12;
-    var boardBottom = Math.max(stringY(0), stringY(5)) + 12;
+    var boardTop = Math.min(geo.stringY(0), geo.stringY(5)) - 12;
+    var boardBottom = Math.max(geo.stringY(0), geo.stringY(5)) + 12;
 
     // fret marker dots (behind everything)
     Object.keys(FRET_MARKERS).forEach(function (fretStr) {
       var fret = parseInt(fretStr, 10);
       var count = FRET_MARKERS[fretStr];
-      var cx = fretCenterX(fret);
+      var cx = geo.fretCenterX(fret);
       if (count === 1) {
         svg.appendChild(svgEl("circle", { cx: cx, cy: (boardTop + boardBottom) / 2, r: 5, class: "fret-marker" }));
       } else {
-        svg.appendChild(svgEl("circle", { cx: cx, cy: stringY(1) + (stringY(2) - stringY(1)) / 2, r: 5, class: "fret-marker" }));
-        svg.appendChild(svgEl("circle", { cx: cx, cy: stringY(3) + (stringY(4) - stringY(3)) / 2, r: 5, class: "fret-marker" }));
+        svg.appendChild(svgEl("circle", { cx: cx, cy: geo.stringY(1) + (geo.stringY(2) - geo.stringY(1)) / 2, r: 5, class: "fret-marker" }));
+        svg.appendChild(svgEl("circle", { cx: cx, cy: geo.stringY(3) + (geo.stringY(4) - geo.stringY(3)) / 2, r: 5, class: "fret-marker" }));
       }
     });
 
     // fret lines
     for (var f = 0; f <= NUM_FRETS; f++) {
-      var x = fretLineX(f);
+      var x = geo.fretLineX(f);
       svg.appendChild(svgEl("line", {
         x1: x, y1: boardTop, x2: x, y2: boardBottom,
         class: f === 0 ? "nut-line" : "fret-line"
@@ -220,7 +219,7 @@
     // fret numbers
     for (var fn = 1; fn <= NUM_FRETS; fn++) {
       if (fn === 3 || fn === 5 || fn === 7 || fn === 9 || fn === 12 || fn === 15) {
-        var fnx = fretCenterX(fn);
+        var fnx = geo.fretCenterX(fn);
         var t = svgEl("text", { x: fnx, y: boardBottom + 20, class: "fret-number", "text-anchor": "middle" });
         t.textContent = fn;
         svg.appendChild(t);
@@ -228,28 +227,26 @@
     }
     // strings
     for (var s = 0; s < 6; s++) {
-      var y = stringY(s);
+      var y = geo.stringY(s);
       svg.appendChild(svgEl("line", {
-        x1: fx(LEFT_MARGIN - 30), y1: y, x2: fretLineX(NUM_FRETS), y2: y,
+        x1: geo.fx(LEFT_MARGIN - 30), y1: y, x2: geo.fretLineX(NUM_FRETS), y2: y,
         class: "string-line", "stroke-width": 1 + (5 - s) * 0.35
       }));
-      var lbl = svgEl("text", { x: fx(LEFT_MARGIN - 36), y: y, class: "string-label", "text-anchor": "middle", "dominant-baseline": "central" });
+      var lbl = svgEl("text", { x: geo.fx(LEFT_MARGIN - 36), y: y, class: "string-label", "text-anchor": "middle", "dominant-baseline": "central" });
       lbl.textContent = STRING_NAMES[s];
       svg.appendChild(lbl);
     }
-
-    return { boardTop: boardTop, boardBottom: boardBottom };
   }
 
-  function drawScaleNotes(svg, state, pcToInfo) {
+  function drawScaleNotes(svg, state, pcToInfo, geo) {
     for (var s = 0; s < 6; s++) {
       for (var f = 0; f <= NUM_FRETS; f++) {
         var midi = STRINGS_OPEN_MIDI[s] + f;
         var pc = midi % 12;
         var info = pcToInfo[pc];
         if (!info) continue;
-        var cx = fretCenterX(f);
-        var cy = stringY(s);
+        var cx = geo.fretCenterX(f);
+        var cy = geo.stringY(s);
         var isRoot = pc === state.keyRootPc;
 
         var circle = svgEl("circle", {
@@ -270,9 +267,9 @@
     }
   }
 
-  function drawTriadShapes(svg, state, shapes, pcToInfo) {
+  function drawTriadShapes(svg, state, shapes, pcToInfo, geo) {
     shapes.forEach(function (shape) {
-      var pts = shape.notes.map(function (n) { return { x: fretCenterX(n.fret), y: stringY(n.string), n: n }; });
+      var pts = shape.notes.map(function (n) { return { x: geo.fretCenterX(n.fret), y: geo.stringY(n.string), n: n }; });
 
       var minX = Math.min.apply(null, pts.map(function (p) { return p.x; })) - DOT_R - 5;
       var maxX = Math.max.apply(null, pts.map(function (p) { return p.x; })) + DOT_R + 5;
@@ -311,61 +308,17 @@
   }
 
   // ============================================================
-  // APP STATE + UI WIRING
+  // PER-WINDOW STATE HELPERS
   // ============================================================
 
-  var state = {
-    keyLetter: "C",
-    keyAcc: 0,
-    scaleType: "major",
-    displayMode: "dots",
-    showScale: true,
-    showTriad: false,
-    triadDegree: 0,
-    stringSets: [[2, 3, 4], [3, 4, 5]],
-    keyRootPc: 0,
-    lefty: false,
-    flipV: false
-  };
-
-  function populateKeySelect() {
-    var sel = document.getElementById("keySelect");
-    KEY_LIST.forEach(function (k, i) {
-      var opt = document.createElement("option");
-      opt.value = String(i);
-      opt.textContent = k.label;
-      if (k.label === "C") opt.selected = true;
-      sel.appendChild(opt);
-    });
-  }
-
-  function currentKeyEntry() {
+  function currentKeyEntry(state) {
     for (var i = 0; i < KEY_LIST.length; i++) {
       if (KEY_LIST[i].letter === state.keyLetter && KEY_LIST[i].acc === state.keyAcc) return KEY_LIST[i];
     }
     return KEY_LIST[0];
   }
 
-  function populateTriadDegreeSelect() {
-    var sel = document.getElementById("triadDegreeSelect");
-    sel.innerHTML = "";
-    var parentName = SCALE_TYPES[state.scaleType].parent;
-    var parent = PARENT_SCALES[parentName];
-    var rootPc = state.keyRootPc;
-    var spelled = spellScale(state.keyLetter, rootPc, parent.offsets, [0, 1, 2, 3, 4, 5, 6]);
-
-    for (var i = 0; i < 7; i++) {
-      var rootNote = spelled[i];
-      var qualityLabel = parent.qualities[i] === "maj" ? "major" : parent.qualities[i] === "min" ? "minor" : "diminished";
-      var opt = document.createElement("option");
-      opt.value = String(i);
-      opt.textContent = parent.romans[i] + " – " + noteName(rootNote.letter, rootNote.acc) + " " + qualityLabel;
-      sel.appendChild(opt);
-    }
-    sel.value = String(state.triadDegree);
-  }
-
-  function computeTriadPCs() {
+  function computeTriadPCs(state) {
     var parentName = SCALE_TYPES[state.scaleType].parent;
     var parent = PARENT_SCALES[parentName];
     var i = state.triadDegree;
@@ -379,7 +332,7 @@
     ];
   }
 
-  function buildPcToInfo() {
+  function buildPcToInfo(state) {
     var def = SCALE_TYPES[state.scaleType];
     var spelled = spellScale(state.keyLetter, state.keyRootPc, def.offsets, def.degreeSteps);
     var map = {};
@@ -389,47 +342,9 @@
     return map;
   }
 
-  function render() {
-    var svg = document.getElementById("fretboardSvg");
-    buildFretboardSvg(svg, state);
-
-    var pcToInfo = buildPcToInfo();
-    if (state.showScale) drawScaleNotes(svg, state, pcToInfo);
-
-    var triadReadout = document.getElementById("triadReadout");
-    var statusTriad = document.getElementById("statusTriad");
-
-    if (state.showTriad) {
-      var parentName = SCALE_TYPES[state.scaleType].parent;
-      var parent = PARENT_SCALES[parentName];
-      var triadPCs = computeTriadPCs();
-      var spelled = spellScale(state.keyLetter, state.keyRootPc, parent.offsets, [0, 1, 2, 3, 4, 5, 6]);
-      var rootNote = spelled[state.triadDegree];
-      var qualityLabel = parent.qualities[state.triadDegree] === "maj" ? "major" : parent.qualities[state.triadDegree] === "min" ? "minor" : "diminished";
-
-      var allShapes = [];
-      state.stringSets.forEach(function (ss) {
-        var shapes = generateTriadShapes(triadPCs, ss, NUM_FRETS);
-        allShapes = allShapes.concat(shapes);
-      });
-      drawTriadShapes(svg, state, allShapes, buildScaleIndependentInfo(triadPCs, parent));
-
-      var label = parent.romans[state.triadDegree] + " – " + noteName(rootNote.letter, rootNote.acc) + " " + qualityLabel;
-      triadReadout.textContent = label + ": " + allShapes.length + " shape(s) shown across selected string sets.";
-      statusTriad.textContent = "Triad: " + label;
-    } else {
-      triadReadout.textContent = 'Pick a degree and check "Highlight triad" to see shapes.';
-      statusTriad.textContent = "Triad: off";
-    }
-
-    var keyEntry = currentKeyEntry();
-    document.getElementById("statusKey").textContent = "Key: " + keyEntry.label;
-    document.getElementById("statusScale").textContent = "Scale: " + SCALE_TYPES[state.scaleType].name;
-  }
-
   // Triad note labels need spellings even for chord tones outside the currently
   // displayed scale subset (e.g. a pentatonic view still needs the 3rd/5th spelled).
-  function buildScaleIndependentInfo(triadPCs, parent) {
+  function buildScaleIndependentInfo(state, triadPCs, parent) {
     var spelled = spellScale(state.keyLetter, state.keyRootPc, parent.offsets, [0, 1, 2, 3, 4, 5, 6]);
     var map = {};
     var i = state.triadDegree;
@@ -441,61 +356,267 @@
     return map;
   }
 
-  function onKeyChange() {
-    var sel = document.getElementById("keySelect");
-    var entry = KEY_LIST[parseInt(sel.value, 10)];
-    state.keyLetter = entry.letter;
-    state.keyAcc = entry.acc;
-    state.keyRootPc = keyRootPc(entry.letter, entry.acc);
-    populateTriadDegreeSelect();
-    render();
+  // ============================================================
+  // WINDOW MANAGER
+  // ============================================================
+
+  var desktop, taskbarApps, startMenu;
+  var zTop = 10;
+  var winSeq = 0;
+
+  function focusWindow(win) {
+    win.root.style.zIndex = ++zTop;
+    document.querySelectorAll(".xp-window").forEach(function (el) { el.classList.remove("focused"); });
+    win.root.classList.add("focused");
+    document.querySelectorAll(".taskbar-app").forEach(function (el) { el.classList.remove("active"); });
+    win.taskBtn.classList.add("active");
   }
 
-  function onScaleChange() {
-    state.scaleType = document.getElementById("scaleSelect").value;
-    populateTriadDegreeSelect();
-    render();
-  }
+  function createAppWindow() {
+    winSeq++;
+    var seq = winSeq;
+    var tmpl = document.getElementById("xpWindowTemplate");
+    var root = tmpl.content.firstElementChild.cloneNode(true);
 
-  function onDisplayModeChange(e) {
-    state.displayMode = e.target.value;
-    render();
-  }
+    var state = {
+      keyLetter: "C",
+      keyAcc: 0,
+      scaleType: "major",
+      displayMode: "dots",
+      showScale: true,
+      showTriad: false,
+      triadDegree: 0,
+      stringSets: [[2, 3, 4], [3, 4, 5]],
+      keyRootPc: keyRootPc("C", 0),
+      lefty: false,
+      flipV: false
+    };
 
-  function onShowScaleToggle(e) {
-    state.showScale = e.target.checked;
-    render();
-  }
+    var win = { root: root, state: state, taskBtn: null, minimized: false };
 
-  function onShowTriadToggle(e) {
-    state.showTriad = e.target.checked;
-    render();
-  }
+    function q(sel) { return root.querySelector(sel); }
 
-  function onTriadDegreeChange() {
-    state.triadDegree = parseInt(document.getElementById("triadDegreeSelect").value, 10);
-    render();
-  }
-
-  function onStringSetChange() {
-    var checks = document.querySelectorAll(".stringSetChk");
-    var sets = [];
-    checks.forEach(function (c) {
-      if (c.checked) sets.push(c.value.split(",").map(Number));
+    // ---- taskbar button ----
+    var taskBtn = document.createElement("div");
+    taskBtn.className = "taskbar-app";
+    win.taskBtn = taskBtn;
+    taskbarApps.appendChild(taskBtn);
+    taskBtn.addEventListener("click", function () {
+      if (win.minimized) {
+        win.minimized = false;
+        root.classList.remove("minimized");
+        focusWindow(win);
+      } else if (root.classList.contains("focused")) {
+        minimizeWin();
+      } else {
+        focusWindow(win);
+      }
     });
-    state.stringSets = sets;
+
+    // ---- populate selects ----
+    var keySel = q(".keySelect");
+    KEY_LIST.forEach(function (k, i) {
+      var opt = document.createElement("option");
+      opt.value = String(i);
+      opt.textContent = k.label;
+      if (k.label === "C") opt.selected = true;
+      keySel.appendChild(opt);
+    });
+
+    // radio groups must be unique per window
+    root.querySelectorAll(".displayModeRadio").forEach(function (r) {
+      r.name = "displayMode-" + seq;
+    });
+
+    function populateTriadDegreeSelect() {
+      var sel = q(".triadDegreeSelect");
+      sel.innerHTML = "";
+      var parent = PARENT_SCALES[SCALE_TYPES[state.scaleType].parent];
+      var spelled = spellScale(state.keyLetter, state.keyRootPc, parent.offsets, [0, 1, 2, 3, 4, 5, 6]);
+      for (var i = 0; i < 7; i++) {
+        var rootNote = spelled[i];
+        var qualityLabel = parent.qualities[i] === "maj" ? "major" : parent.qualities[i] === "min" ? "minor" : "diminished";
+        var opt = document.createElement("option");
+        opt.value = String(i);
+        opt.textContent = parent.romans[i] + " – " + noteName(rootNote.letter, rootNote.acc) + " " + qualityLabel;
+        sel.appendChild(opt);
+      }
+      sel.value = String(state.triadDegree);
+    }
+
+    // ---- render ----
+    function render() {
+      var svg = q(".fretboardSvg");
+      var geo = makeGeometry(state);
+      buildFretboardSvg(svg, geo);
+
+      var pcToInfo = buildPcToInfo(state);
+      if (state.showScale) drawScaleNotes(svg, state, pcToInfo, geo);
+
+      var triadReadout = q(".triadReadout");
+      var statusTriad = q(".statusTriad");
+
+      if (state.showTriad) {
+        var parent = PARENT_SCALES[SCALE_TYPES[state.scaleType].parent];
+        var triadPCs = computeTriadPCs(state);
+        var spelled = spellScale(state.keyLetter, state.keyRootPc, parent.offsets, [0, 1, 2, 3, 4, 5, 6]);
+        var rootNote = spelled[state.triadDegree];
+        var qualityLabel = parent.qualities[state.triadDegree] === "maj" ? "major" : parent.qualities[state.triadDegree] === "min" ? "minor" : "diminished";
+
+        var allShapes = [];
+        state.stringSets.forEach(function (ss) {
+          allShapes = allShapes.concat(generateTriadShapes(triadPCs, ss, NUM_FRETS));
+        });
+        drawTriadShapes(svg, state, allShapes, buildScaleIndependentInfo(state, triadPCs, parent), geo);
+
+        var label = parent.romans[state.triadDegree] + " – " + noteName(rootNote.letter, rootNote.acc) + " " + qualityLabel;
+        triadReadout.textContent = label + ": " + allShapes.length + " shape(s) shown across selected string sets.";
+        statusTriad.textContent = "Triad: " + label;
+      } else {
+        triadReadout.textContent = 'Pick a degree and check "Highlight triad" to see shapes.';
+        statusTriad.textContent = "Triad: off";
+      }
+
+      var keyEntry = currentKeyEntry(state);
+      var summary = keyEntry.label + " " + SCALE_TYPES[state.scaleType].name;
+      q(".statusKey").textContent = "Key: " + keyEntry.label;
+      q(".statusScale").textContent = "Scale: " + SCALE_TYPES[state.scaleType].name;
+      q(".titlebar-text").textContent = "GuitarTriads98.exe - " + summary;
+      taskBtn.textContent = "♪ " + summary;
+    }
+
+    // ---- control wiring ----
+    keySel.addEventListener("change", function () {
+      var entry = KEY_LIST[parseInt(keySel.value, 10)];
+      state.keyLetter = entry.letter;
+      state.keyAcc = entry.acc;
+      state.keyRootPc = keyRootPc(entry.letter, entry.acc);
+      populateTriadDegreeSelect();
+      render();
+    });
+
+    q(".scaleSelect").addEventListener("change", function (e) {
+      state.scaleType = e.target.value;
+      populateTriadDegreeSelect();
+      render();
+    });
+
+    root.querySelectorAll(".displayModeRadio").forEach(function (r) {
+      r.addEventListener("change", function (e) {
+        state.displayMode = e.target.value;
+        render();
+      });
+    });
+
+    q(".showScaleToggle").addEventListener("change", function (e) {
+      state.showScale = e.target.checked;
+      render();
+    });
+
+    q(".showTriadToggle").addEventListener("change", function (e) {
+      state.showTriad = e.target.checked;
+      render();
+    });
+
+    q(".triadDegreeSelect").addEventListener("change", function (e) {
+      state.triadDegree = parseInt(e.target.value, 10);
+      render();
+    });
+
+    root.querySelectorAll(".stringSetChk").forEach(function (c) {
+      c.addEventListener("change", function () {
+        var sets = [];
+        root.querySelectorAll(".stringSetChk").forEach(function (chk) {
+          if (chk.checked) sets.push(chk.value.split(",").map(Number));
+        });
+        state.stringSets = sets;
+        render();
+      });
+    });
+
+    q(".leftyToggle").addEventListener("change", function (e) {
+      state.lefty = e.target.checked;
+      render();
+    });
+
+    q(".flipVToggle").addEventListener("change", function (e) {
+      state.flipV = e.target.checked;
+      render();
+    });
+
+    // ---- window chrome behavior ----
+    function closeWin() {
+      root.remove();
+      taskBtn.remove();
+    }
+
+    function minimizeWin() {
+      win.minimized = true;
+      root.classList.add("minimized");
+      taskBtn.classList.remove("active");
+    }
+
+    q(".tb-close").addEventListener("click", closeWin);
+    q(".tb-min").addEventListener("click", minimizeWin);
+    q(".tb-max").addEventListener("click", function () {
+      root.classList.toggle("maximized");
+      focusWindow(win);
+    });
+
+    // click anywhere on the window brings it to front
+    root.addEventListener("pointerdown", function () { focusWindow(win); }, true);
+
+    // drag by titlebar
+    var titlebar = q(".titlebar");
+    titlebar.addEventListener("pointerdown", function (e) {
+      if (e.target.closest(".tb-btn")) return;
+      if (root.classList.contains("maximized")) return;
+      var startX = e.clientX, startY = e.clientY;
+      var startL = root.offsetLeft, startT = root.offsetTop;
+      function onMove(ev) {
+        root.style.left = (startL + ev.clientX - startX) + "px";
+        root.style.top = Math.max(0, startT + ev.clientY - startY) + "px";
+      }
+      function onUp() {
+        document.removeEventListener("pointermove", onMove);
+        document.removeEventListener("pointerup", onUp);
+      }
+      document.addEventListener("pointermove", onMove);
+      document.addEventListener("pointerup", onUp);
+      e.preventDefault();
+    });
+
+    // File menu
+    var dropdown = q(".menu-dropdown");
+    q(".menu-file").addEventListener("click", function (e) {
+      var wasHidden = dropdown.classList.contains("hidden");
+      document.querySelectorAll(".menu-dropdown").forEach(function (d) { d.classList.add("hidden"); });
+      if (wasHidden) dropdown.classList.remove("hidden");
+      e.stopPropagation();
+    });
+    q(".opt-new").addEventListener("click", function () {
+      dropdown.classList.add("hidden");
+      focusWindow(createAppWindow());
+    });
+    q(".opt-close").addEventListener("click", closeWin);
+
+    // ---- place on desktop (cascade) ----
+    var wWidth = Math.min(960, desktop.clientWidth - 16);
+    var baseLeft = Math.max(8, (desktop.clientWidth - wWidth) / 2);
+    var offset = ((seq - 1) % 7) * 26;
+    root.style.left = Math.min(baseLeft + offset, Math.max(8, desktop.clientWidth - wWidth - 8)) + "px";
+    root.style.top = (10 + offset) + "px";
+
+    desktop.appendChild(root);
+    populateTriadDegreeSelect();
     render();
+    focusWindow(win);
+    return win;
   }
 
-  function onLeftyToggle(e) {
-    state.lefty = e.target.checked;
-    render();
-  }
-
-  function onFlipVToggle(e) {
-    state.flipV = e.target.checked;
-    render();
-  }
+  // ============================================================
+  // DESKTOP / TASKBAR
+  // ============================================================
 
   function updateClock() {
     var el = document.getElementById("taskbarClock");
@@ -508,26 +629,26 @@
   }
 
   function init() {
-    populateKeySelect();
-    state.keyRootPc = keyRootPc(state.keyLetter, state.keyAcc);
-    populateTriadDegreeSelect();
+    desktop = document.getElementById("desktop");
+    taskbarApps = document.getElementById("taskbarApps");
+    startMenu = document.getElementById("startMenu");
 
-    document.getElementById("keySelect").addEventListener("change", onKeyChange);
-    document.getElementById("scaleSelect").addEventListener("change", onScaleChange);
-    document.querySelectorAll('input[name="displayMode"]').forEach(function (r) {
-      r.addEventListener("change", onDisplayModeChange);
+    document.getElementById("startBtn").addEventListener("click", function (e) {
+      startMenu.classList.toggle("hidden");
+      e.stopPropagation();
     });
-    document.getElementById("showScaleToggle").addEventListener("change", onShowScaleToggle);
-    document.getElementById("showTriadToggle").addEventListener("change", onShowTriadToggle);
-    document.getElementById("triadDegreeSelect").addEventListener("change", onTriadDegreeChange);
-    document.querySelectorAll(".stringSetChk").forEach(function (c) {
-      c.addEventListener("change", onStringSetChange);
+    document.getElementById("startNewWindow").addEventListener("click", function () {
+      startMenu.classList.add("hidden");
+      createAppWindow();
     });
-    document.getElementById("leftyToggle").addEventListener("change", onLeftyToggle);
-    document.getElementById("flipVToggle").addEventListener("change", onFlipVToggle);
 
-    onStringSetChange();
-    render();
+    // any stray click closes menus
+    document.addEventListener("click", function () {
+      document.querySelectorAll(".menu-dropdown").forEach(function (d) { d.classList.add("hidden"); });
+      startMenu.classList.add("hidden");
+    });
+
+    createAppWindow();
 
     updateClock();
     setInterval(updateClock, 1000 * 15);
